@@ -16,7 +16,11 @@
  */
 package org.apache.lucene.store;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.LongBuffer;
 import java.util.zip.Checksum;
+import org.apache.lucene.util.BitUtil;
 
 /** Wraps another {@link Checksum} with an internal buffer to speed up checksum calculations. */
 public class BufferedChecksum implements Checksum {
@@ -57,6 +61,37 @@ public class BufferedChecksum implements Checksum {
       }
       System.arraycopy(b, off, buffer, upto, len);
       upto += len;
+    }
+  }
+
+  void updateShort(short val) {
+    if (upto + Short.BYTES > buffer.length) flush();
+    BitUtil.VH_LE_SHORT.set(buffer, upto, val);
+    upto += Short.BYTES;
+  }
+
+  void updateInt(int val) {
+    if (upto + Integer.BYTES > buffer.length) flush();
+    BitUtil.VH_LE_INT.set(buffer, upto, val);
+    upto += Integer.BYTES;
+  }
+
+  void updateLong(long val) {
+    if (upto + Long.BYTES > buffer.length) flush();
+    BitUtil.VH_LE_LONG.set(buffer, upto, val);
+    upto += Long.BYTES;
+  }
+
+  void updateLongs(long[] vals, int offset, int len) {
+    flush();
+    LongBuffer b = ByteBuffer.wrap(buffer).order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+    final int bufferSizeInLongs = buffer.length / Long.BYTES;
+    while (len > 0) {
+      int l = Math.min(bufferSizeInLongs, len);
+      b.put(0, vals, offset, l);
+      in.update(buffer, 0, l * Long.BYTES);
+      offset += l;
+      len -= l;
     }
   }
 
