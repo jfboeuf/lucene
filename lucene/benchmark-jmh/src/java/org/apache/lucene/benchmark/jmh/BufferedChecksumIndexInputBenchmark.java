@@ -60,7 +60,7 @@ public class BufferedChecksumIndexInputBenchmark {
   private Directory dir;
   private IndexInput in;
 
-  @Param({"10", "1000", "100000"})
+  @Param({"8", "16", "32", "64"})
   public int size;
 
   @Setup(Level.Trial)
@@ -70,6 +70,7 @@ public class BufferedChecksumIndexInputBenchmark {
     try (IndexOutput out = dir.createOutput(NAME, IOContext.DEFAULT)) {
       Random r = new Random(0);
       // Write enough random data to not reach EOF while decoding
+      CodecUtil.writeHeader(out, NAME, 0);
       for (int i = 0; i < size; ++i) {
         out.writeLong(r.nextLong());
       }
@@ -90,6 +91,7 @@ public class BufferedChecksumIndexInputBenchmark {
   }
 
   private void decodeSingleLongs(ChecksumIndexInput in, Blackhole bh) throws IOException {
+    CodecUtil.checkHeader(in, NAME, 0, 0);
     long[] dst = new long[size];
     for (int i = 0; i < size; ++i) {
       dst[i] = in.readLong();
@@ -99,6 +101,7 @@ public class BufferedChecksumIndexInputBenchmark {
   }
 
   private void decodeLongArray(ChecksumIndexInput in, Blackhole bh) throws IOException {
+    CodecUtil.checkHeader(in, NAME, 0, 0);
     long[] dst = new long[size];
     in.readLongs(dst, 0, size);
     bh.consume(CodecUtil.checkFooter(in));
@@ -118,18 +121,18 @@ public class BufferedChecksumIndexInputBenchmark {
     decodeSingleLongs(newChecksumInput(), bh);
   }
 
-  @Benchmark
-  public void decodeSingleLongsOrig(Blackhole bh) throws IOException {
-    decodeSingleLongs(newChecksumInputOrig(), bh);
-  }
+  //  @Benchmark
+  //  public void decodeSingleLongsOrig(Blackhole bh) throws IOException {
+  //    decodeSingleLongs(newChecksumInputOrig(), bh);
+  //  }
 
   @Benchmark
   public void decodeLongArray(Blackhole bh) throws IOException {
     decodeLongArray(newChecksumInput(), bh);
   }
 
-  @Benchmark
-  public void decodeLongArrayOrig(Blackhole bh) throws IOException {
-    decodeSingleLongs(newChecksumInputOrig(), bh);
-  }
+  //  @Benchmark
+  //  public void decodeLongArrayOrig(Blackhole bh) throws IOException {
+  //    decodeSingleLongs(newChecksumInputOrig(), bh);
+  //  }
 }
